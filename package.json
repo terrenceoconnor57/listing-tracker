@@ -1,0 +1,14 @@
+{
+  "name": "listing-tracker",
+  "version": "1.0.0",
+  "description": "Job Posting Change Alert - monitors job URLs and emails you when they change",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'no build'",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "stripe": "^14.0.0",
+    "@vercel/kv": "^2.0.0"
+  }
+}

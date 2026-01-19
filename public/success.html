@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Live! | Job Posting Alert</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <main class="card result-page">
+      <div class="result-icon">🎉</div>
+      <h1>You're live!</h1>
+      <p>We'll email you the moment your job posting changes.</p>
+      
+      <div class="note">
+        ⏱️ The first check may take up to 5 minutes. After that, we'll monitor every 5 minutes around the clock.
+      </div>
+
+      <a href="/" class="btn btn-primary">Track Another Job</a>
+    </main>
+
+    <footer>
+      <ul class="features">
+        <li>✓ Checks every 5 min</li>
+        <li>✓ Instant email alerts</li>
+        <li>✓ One-time $5</li>
+      </ul>
+    </footer>
+  </div>
+
+  <script>
+    // Clear form storage after successful payment
+    localStorage.removeItem('job-alert-form');
+  </script>
+</body>
+</html>

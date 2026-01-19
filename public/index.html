@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Posting Alert | Get notified when it changes</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">📡</div>
+      <h1>Job Posting Alert</h1>
+      <p class="tagline">Get emailed the moment a job listing changes</p>
+    </header>
+
+    <main class="card">
+      <!-- Step 1: Info Form -->
+      <div id="step-info">
+        <div class="step-header">
+          <span class="step-badge">1</span>
+          <h2>Enter details</h2>
+        </div>
+
+        <form id="info-form" autocomplete="off">
+          <div class="form-group">
+            <label for="url">Job Posting URL</label>
+            <input 
+              type="url" 
+              id="url" 
+              name="url" 
+              placeholder="https://company.com/careers/job-123"
+              required
+            >
+            <span class="hint" id="url-hint"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Your Email</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email" 
+              placeholder="you@example.com"
+              required
+            >
+            <span class="hint" id="email-hint"></span>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="confirm" name="confirm">
+              <span class="checkmark"></span>
+              <span>I confirm I own this email and want alerts</span>
+            </label>
+          </div>
+
+          <button type="submit" id="continue-btn" class="btn btn-primary" disabled>
+            Continue
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 2: Payment (hidden by default) -->
+      <div id="step-payment" class="hidden">
+        <div class="step-header">
+          <span class="step-badge">2</span>
+          <h2>Confirm & Pay</h2>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-row">
+            <span class="summary-label">URL</span>
+            <span class="summary-value" id="summary-url"></span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Email</span>
+            <span class="summary-value" id="summary-email"></span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Check frequency</span>
+            <span class="summary-value">Every 5 minutes</span>
+          </div>
+          <div class="summary-row price-row">
+            <span class="summary-label">Price</span>
+            <span class="summary-value price">$5 <span class="one-time">one-time</span></span>
+          </div>
+        </div>
+
+        <button id="pay-btn" class="btn btn-accent">
+          Pay $5 & Start Monitoring
+        </button>
+
+        <button id="edit-btn" class="btn-link">
+          ← Edit details
+        </button>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p>Redirecting to checkout...</p>
+      </div>
+
+      <!-- Error message -->
+      <div id="error-msg" class="error-box hidden"></div>
+    </main>
+
+    <footer>
+      <ul class="features">
+        <li>✓ Checks every 5 min</li>
+        <li>✓ Instant email alerts</li>
+        <li>✓ One-time $5</li>
+      </ul>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
