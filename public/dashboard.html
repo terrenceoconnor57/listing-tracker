@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Competitor Tracker</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .dashboard-header h1 {
+      font-size: 1.5rem;
+      margin: 0;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .user-email {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .logout-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .logout-btn:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+    .schedule-info {
+      background: rgba(99, 102, 241, 0.1);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .schedule-info strong {
+      color: var(--text);
+    }
+    .monitors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .monitor-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      position: relative;
+    }
+    .monitor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .monitor-url {
+      font-size: 0.9rem;
+      word-break: break-all;
+      margin-bottom: 0.5rem;
+      flex: 1;
+    }
+    .monitor-url a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .monitor-url a:hover {
+      text-decoration: underline;
+    }
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .delete-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+    .delete-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .monitor-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+    .monitor-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .status-dot.inactive {
+      background: var(--text-muted);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+    .empty-state p {
+      margin-bottom: 1rem;
+    }
+    .add-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .add-btn:hover {
+      background: var(--accent-hover);
+    }
+    .container {
+      max-width: 600px;
+    }
+    .confirm-dialog {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .confirm-dialog.hidden {
+      display: none;
+    }
+    .confirm-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      max-width: 360px;
+      width: 90%;
+    }
+    .confirm-box h3 {
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+    }
+    .confirm-box p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .confirm-buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+    .confirm-buttons button {
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+    .cancel-btn {
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border) !important;
+    }
+    .confirm-delete-btn {
+      background: var(--error);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <main class="card">
+      <div class="dashboard-header">
+        <h1>Your Monitors</h1>
+        <div class="user-info">
+          <span class="user-email" id="user-email"></span>
+          <button class="logout-btn" id="logout-btn">Log out</button>
+        </div>
+      </div>
+
+      <div class="schedule-info">
+        <strong>Schedule:</strong> <span id="schedule">Daily at 5:00 AM UTC</span>
+      </div>
+
+      <div id="loading">
+        <div class="spinner"></div>
+        <p style="text-align: center; color: var(--text-muted);">Loading...</p>
+      </div>
+
+      <div id="monitors-container" class="hidden">
+        <div id="monitors-list" class="monitors-list"></div>
+        <div id="empty-state" class="empty-state hidden">
+          <p>You're not tracking any pages yet.</p>
+          <a href="/" class="add-btn">Add Your First Monitor</a>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <a href="/" class="add-btn">+ Add New Monitor</a>
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirm Delete Dialog -->
+  <div id="confirm-dialog" class="confirm-dialog hidden">
+    <div class="confirm-box">
+      <h3>Remove Monitor?</h3>
+      <p>This will stop tracking the page. You won't receive any more change alerts for this URL.</p>
+      <div class="confirm-buttons">
+        <button class="cancel-btn" id="cancel-delete">Cancel</button>
+        <button class="confirm-delete-btn" id="confirm-delete">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const userEmailEl = document.getElementById('user-email');
+    const scheduleEl = document.getElementById('schedule');
+    const loadingEl = document.getElementById('loading');
+    const monitorsContainer = document.getElementById('monitors-container');
+    const monitorsList = document.getElementById('monitors-list');
+    const emptyState = document.getElementById('empty-state');
+    const logoutBtn = document.getElementById('logout-btn');
+    const confirmDialog = document.getElementById('confirm-dialog');
+    const cancelDeleteBtn = document.getElementById('cancel-delete');
+    const confirmDeleteBtn = document.getElementById('confirm-delete');
+
+    let monitors = [];
+    let pendingDeleteId = null;
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/dashboard');
+        const data = await res.json();
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            window.location.href = '/login.html';
+            return;
+          }
+          throw new Error(data.error || 'Failed to load dashboard');
+        }
+
+        userEmailEl.textContent = data.email;
+        scheduleEl.textContent = data.schedule;
+        monitors = data.monitors;
+
+        loadingEl.classList.add('hidden');
+        monitorsContainer.classList.remove('hidden');
+
+        if (monitors.length === 0) {
+          emptyState.classList.remove('hidden');
+          monitorsList.classList.add('hidden');
+        } else {
+          emptyState.classList.add('hidden');
+          monitorsList.classList.remove('hidden');
+          renderMonitors(monitors);
+        }
+
+      } catch (err) {
+        loadingEl.innerHTML = `<p style="color: var(--error);">${err.message}</p>`;
+      }
+    }
+
+    function renderMonitors(monitors) {
+      monitorsList.innerHTML = monitors.map(m => {
+        const createdDate = new Date(m.createdAt).toLocaleDateString();
+        const lastNotified = m.lastNotifiedAt 
+          ? new Date(m.lastNotifiedAt).toLocaleDateString()
+          : 'Never';
+        
+        return `
+          <div class="monitor-item" data-id="${escapeHtml(m.id)}">
+            <div class="monitor-header">
+              <div class="monitor-url">
+                <a href="${escapeHtml(m.url)}" target="_blank" rel="noopener">${escapeHtml(m.url)}</a>
+              </div>
+              <button class="delete-btn" data-id="${escapeHtml(m.id)}" title="Remove monitor">✕</button>
+            </div>
+            <div class="monitor-meta">
+              <span class="monitor-status">
+                <span class="status-dot ${m.active ? '' : 'inactive'}"></span>
+                ${m.active ? 'Active' : 'Inactive'}
+              </span>
+              <span>Added: ${createdDate}</span>
+              <span>Last change: ${lastNotified}</span>
+              ${m.paid ? '<span>Paid</span>' : '<span>Free</span>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Attach delete handlers
+      monitorsList.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          pendingDeleteId = btn.dataset.id;
+          confirmDialog.classList.remove('hidden');
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    cancelDeleteBtn.addEventListener('click', () => {
+      pendingDeleteId = null;
+      confirmDialog.classList.add('hidden');
+    });
+
+    confirmDeleteBtn.addEventListener('click', async () => {
+      if (!pendingDeleteId) return;
+
+      const id = pendingDeleteId;
+      confirmDeleteBtn.disabled = true;
+      confirmDeleteBtn.textContent = 'Removing...';
+
+      try {
+        const res = await fetch('/api/delete-monitor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ monitorId: id })
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Failed to delete monitor');
+        }
+
+        // Remove from local list and re-render
+        monitors = monitors.filter(m => m.id !== id);
+        
+        if (monitors.length === 0) {
+          emptyState.classList.remove('hidden');
+          monitorsList.classList.add('hidden');
+        } else {
+          renderMonitors(monitors);
+        }
+
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        pendingDeleteId = null;
+        confirmDialog.classList.add('hidden');
+        confirmDeleteBtn.disabled = false;
+        confirmDeleteBtn.textContent = 'Remove';
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/';
+      } catch (err) {
+        console.error('Logout failed:', err);
+      }
+    });
+
+    loadDashboard();
+  </script>
+</body>
+</html>

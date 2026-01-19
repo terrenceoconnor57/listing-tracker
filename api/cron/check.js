@@ -113,7 +113,7 @@ export async function GET(request) {
           const snippet = cleanedText.substring(0, 600);
           const timestamp = new Date(now).toISOString();
 
-          const emailBody = `The job posting you're tracking has changed!
+          const emailBody = `The page you're tracking has changed!
 
 URL: ${monitor.url}
 
@@ -123,10 +123,10 @@ Content preview:
 ${snippet}${cleanedText.length > 600 ? '...' : ''}
 
 ---
-Job Posting Alert`;
+Competitor Tracker`;
 
           try {
-            await sendEmail(monitor.email, 'Job posting changed', emailBody);
+            await sendEmail(monitor.email, 'Page changed', emailBody);
             console.log(`Email sent to ${monitor.email} for ${monitor.url}`);
           } catch (emailErr) {
             console.error(`Failed to send email to ${monitor.email}:`, emailErr.message);

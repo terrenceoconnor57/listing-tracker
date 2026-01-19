@@ -1,10 +1,21 @@
 import Stripe from 'stripe';
+import { getUserFromSession } from './_lib/auth.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
   try {
-    const { url, email } = await request.json();
+    // Check authentication
+    const user = await getUserFromSession(request);
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { url } = await request.json();
+    const email = user.email; // Use authenticated user's email
 
     // Validate URL
     if (!url || typeof url !== 'string') {
@@ -21,14 +32,6 @@ export async function POST(request) {
       }
     } catch {
       return new Response(JSON.stringify({ error: 'Invalid URL format' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Validate email
-    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return new Response(JSON.stringify({ error: 'Invalid email address' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });

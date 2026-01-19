@@ -4,20 +4,20 @@
   // DOM Elements
   const form = document.getElementById('monitor-form');
   const urlInput = document.getElementById('url');
-  const emailInput = document.getElementById('email');
-  const confirmCheckbox = document.getElementById('confirm');
   const submitBtn = document.getElementById('submit-btn');
   const urlHint = document.getElementById('url-hint');
-  const emailHint = document.getElementById('email-hint');
   const freeUsageEl = document.getElementById('free-usage');
   const loadingEl = document.getElementById('loading');
   const loadingText = document.getElementById('loading-text');
   const errorMsg = document.getElementById('error-msg');
+  const authBar = document.getElementById('auth-bar');
+  const logoutLink = document.getElementById('logout-link');
 
   // Storage key
-  const STORAGE_KEY = 'job-alert-form';
+  const STORAGE_KEY = 'competitor-tracker-form';
 
   // State
+  let currentUser = null;
   let canAddFree = true;
   let freeUsed = 0;
   const FREE_LIMIT = 2;
@@ -32,14 +32,8 @@
     }
   }
 
-  function isValidEmail(str) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
-  }
-
   function validateForm() {
     const url = urlInput.value.trim();
-    const email = emailInput.value.trim();
-    const confirmed = confirmCheckbox.checked;
 
     let valid = true;
 
@@ -47,6 +41,7 @@
     if (!url) {
       urlHint.textContent = '';
       urlHint.className = 'hint';
+      valid = false;
     } else if (isValidUrl(url)) {
       urlHint.textContent = '✓ Valid URL';
       urlHint.className = 'hint valid';
@@ -56,40 +51,28 @@
       valid = false;
     }
 
-    // Email validation
-    if (!email) {
-      emailHint.textContent = '';
-      emailHint.className = 'hint';
-    } else if (isValidEmail(email)) {
-      emailHint.textContent = '✓ Valid email';
-      emailHint.className = 'hint valid';
+    // Must be logged in
+    if (!currentUser) {
+      submitBtn.textContent = 'Sign up to start monitoring';
+      submitBtn.disabled = !valid;
     } else {
-      emailHint.textContent = 'Enter a valid email address';
-      emailHint.className = 'hint error';
-      valid = false;
+      // Update button text based on free status
+      if (canAddFree) {
+        submitBtn.textContent = 'Start Monitoring (Free)';
+      } else {
+        submitBtn.textContent = 'Pay $5 & Start Monitoring';
+      }
+      submitBtn.disabled = !valid;
     }
-
-    const allValid = valid && url && email && isValidUrl(url) && isValidEmail(email) && confirmed;
-    
-    // Update button text based on free status
-    if (canAddFree) {
-      submitBtn.textContent = 'Start Monitoring (Free)';
-    } else {
-      submitBtn.textContent = 'Pay $5 & Start Monitoring';
-    }
-    
-    submitBtn.disabled = !allValid;
 
     saveToStorage();
-    return allValid;
+    return valid && currentUser;
   }
 
   // Storage
   function saveToStorage() {
     const data = {
-      url: urlInput.value,
-      email: emailInput.value,
-      confirmed: confirmCheckbox.checked
+      url: urlInput.value
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
@@ -99,25 +82,43 @@
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (data) {
         urlInput.value = data.url || '';
-        emailInput.value = data.email || '';
-        confirmCheckbox.checked = data.confirmed || false;
       }
     } catch {
       // Ignore
     }
   }
 
+  // Check auth state
+  async function checkAuth() {
+    try {
+      const res = await fetch('/api/me');
+      const data = await res.json();
+      
+      if (data.authenticated) {
+        currentUser = data.email;
+        authBar.classList.add('logged-in');
+        checkFreeUsage();
+      } else {
+        currentUser = null;
+        authBar.classList.remove('logged-in');
+      }
+      
+      validateForm();
+    } catch {
+      currentUser = null;
+    }
+  }
+
   // Check free usage
   async function checkFreeUsage() {
-    const email = emailInput.value.trim();
-    if (!isValidEmail(email)) {
+    if (!currentUser) {
       freeUsageEl.textContent = 'First 2 URLs free, then $5';
       canAddFree = true;
       return;
     }
 
     try {
-      const res = await fetch(`/api/add-monitor?email=${encodeURIComponent(email)}`);
+      const res = await fetch('/api/add-monitor');
       const data = await res.json();
       
       freeUsed = data.freeUsed || 0;
@@ -157,10 +158,17 @@
   // Submit handler
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!validateForm()) return;
-
+    
     const url = urlInput.value.trim();
-    const email = emailInput.value.trim();
+    
+    if (!isValidUrl(url)) return;
+
+    // If not logged in, redirect to signup
+    if (!currentUser) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ url }));
+      window.location.href = '/signup.html';
+      return;
+    }
 
     if (canAddFree) {
       // Add free monitor
@@ -170,7 +178,7 @@
         const res = await fetch('/api/add-monitor', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, email })
+          body: JSON.stringify({ url })
         });
 
         const data = await res.json();
@@ -180,7 +188,7 @@
           canAddFree = false;
           hideLoading();
           validateForm();
-          await startPayment(url, email);
+          await startPayment(url);
           return;
         }
 
@@ -197,18 +205,18 @@
       }
     } else {
       // Need to pay
-      await startPayment(url, email);
+      await startPayment(url, currentUser);
     }
   }
 
-  async function startPayment(url, email) {
+  async function startPayment(url) {
     showLoading('Redirecting to checkout...');
 
     try {
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, email })
+        body: JSON.stringify({ url })
       });
 
       const data = await res.json();
@@ -227,16 +235,21 @@
 
   // Event listeners
   urlInput.addEventListener('input', validateForm);
-  emailInput.addEventListener('input', () => {
-    validateForm();
-    clearTimeout(emailInput._timeout);
-    emailInput._timeout = setTimeout(checkFreeUsage, 500);
-  });
-  confirmCheckbox.addEventListener('change', validateForm);
   form.addEventListener('submit', handleSubmit);
+  
+  logoutLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+      currentUser = null;
+      authBar.classList.remove('logged-in');
+      validateForm();
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  });
 
   // Init
   loadFromStorage();
-  validateForm();
-  checkFreeUsage();
+  checkAuth();
 })();

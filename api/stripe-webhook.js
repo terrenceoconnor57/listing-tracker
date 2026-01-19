@@ -60,9 +60,26 @@ async function fetchPageInfo(url) {
   }
 }
 
-export async function POST(request) {
-  const rawBody = await request.text();
-  const sig = request.headers.get('stripe-signature');
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).end('Method Not Allowed');
+  }
+
+  // Read raw body for Stripe signature verification
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+  const rawBody = Buffer.concat(chunks).toString('utf8');
+  
+  const sig = req.headers['stripe-signature'];
 
   let event;
 
@@ -74,7 +91,7 @@ export async function POST(request) {
     );
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   // Handle the event
@@ -86,7 +103,7 @@ export async function POST(request) {
 
     if (!url || !email) {
       console.error('Missing metadata in session:', session.id);
-      return new Response('Missing metadata', { status: 400 });
+      return res.status(400).send('Missing metadata');
     }
 
     try {
@@ -121,21 +138,21 @@ export async function POST(request) {
       // Fetch page info and send welcome email
       const pageInfo = await fetchPageInfo(url);
       
-      const emailBody = `Thanks for your purchase! You're now monitoring this job posting.
+      const emailBody = `Thanks for your purchase! You're now monitoring this page.
 
-${pageInfo.title ? `📋 ${pageInfo.title}` : '📋 Job Posting'}
+${pageInfo.title ? `📋 ${pageInfo.title}` : '📋 Page'}
 
 🔗 ${url}
 
 ${pageInfo.description ? `${pageInfo.description}\n\n` : ''}We'll check this page daily at 5am UTC and email you immediately if anything changes.
 
 ---
-Job Posting Alert`;
+Competitor Tracker`;
 
       try {
         await sendEmail(
           email.toLowerCase(),
-          pageInfo.title ? `Now monitoring: ${pageInfo.title.substring(0, 50)}` : 'Now monitoring your job posting',
+          pageInfo.title ? `Now monitoring: ${pageInfo.title.substring(0, 50)}` : 'Now monitoring your page',
           emailBody
         );
         console.log(`Welcome email sent to ${email}`);
@@ -145,9 +162,9 @@ Job Posting Alert`;
 
     } catch (err) {
       console.error('Failed to create monitor:', err);
-      return new Response('Failed to create monitor', { status: 500 });
+      return res.status(500).send('Failed to create monitor');
     }
   }
 
-  return new Response('OK', { status: 200 });
+  return res.status(200).send('OK');
 }

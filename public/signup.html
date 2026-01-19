@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up | Competitor Tracker</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Create your account</h1>
+      <p class="tagline">Track competitor pages in seconds</p>
+    </header>
+
+    <main class="card">
+      <form id="signup-form" autocomplete="off">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            placeholder="you@company.com"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="At least 8 characters"
+            minlength="8"
+            required
+          >
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-accent">
+          Create Account
+        </button>
+
+        <div id="error-msg" class="error-box hidden"></div>
+        <div id="success-msg" class="success-box hidden"></div>
+      </form>
+
+      <div id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p>Creating your account...</p>
+      </div>
+    </main>
+
+    <footer>
+      <p class="auth-link">Already have an account? <a href="/login.html">Log in</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const form = document.getElementById('signup-form');
+    const errorMsg = document.getElementById('error-msg');
+    const successMsg = document.getElementById('success-msg');
+    const loadingEl = document.getElementById('loading');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      form.classList.add('hidden');
+      loadingEl.classList.remove('hidden');
+      errorMsg.classList.add('hidden');
+      successMsg.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to create account');
+        }
+
+        loadingEl.classList.add('hidden');
+        form.classList.remove('hidden');
+        successMsg.textContent = 'Check your email to verify your account!';
+        successMsg.classList.remove('hidden');
+        form.reset();
+
+      } catch (err) {
+        loadingEl.classList.add('hidden');
+        form.classList.remove('hidden');
+        errorMsg.textContent = err.message;
+        errorMsg.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,18 +1,17 @@
 :root {
-  --bg: #0d1117;
-  --bg-card: #161b22;
-  --bg-input: #0d1117;
-  --border: #30363d;
-  --border-focus: #58a6ff;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --accent: #58a6ff;
-  --accent-hover: #79b8ff;
-  --success: #3fb950;
-  --error: #f85149;
-  --price: #ffd700;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --bg: #0a0a0b;
+  --bg-card: #141416;
+  --bg-input: #1a1a1e;
+  --border: #2a2a2e;
+  --border-focus: #6366f1;
+  --text: #fafafa;
+  --text-muted: #71717a;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --success: #22c55e;
+  --error: #ef4444;
+  --radius: 16px;
+  --radius-sm: 10px;
 }
 
 *, *::before, *::after {
@@ -36,41 +35,30 @@ body {
   padding: 2rem 1rem;
   line-height: 1.5;
   background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(88, 166, 255, 0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(63, 185, 80, 0.08), transparent);
+    radial-gradient(ellipse 100% 80% at 50% -40%, rgba(99, 102, 241, 0.12), transparent);
 }
 
 .container {
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
 }
 
 header {
   text-align: center;
-  margin-bottom: 2rem;
-}
-
-.logo {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  margin-bottom: 2.5rem;
 }
 
 h1 {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 0.25rem;
-  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
 }
 
 .tagline {
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: 1.1rem;
 }
 
 .card {
@@ -81,7 +69,11 @@ h1 {
 }
 
 .form-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.url-group {
+  margin-bottom: 0.75rem;
 }
 
 label {
@@ -95,12 +87,12 @@ label {
 input[type="url"],
 input[type="email"] {
   width: 100%;
-  padding: 0.875rem 1rem;
+  padding: 1rem 1.25rem;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-family: inherit;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -109,13 +101,12 @@ input[type="url"]:focus,
 input[type="email"]:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 input[type="url"]::placeholder,
 input[type="email"]::placeholder {
   color: var(--text-muted);
-  opacity: 0.6;
 }
 
 .hint {
@@ -134,7 +125,8 @@ input[type="email"]::placeholder {
 }
 
 .checkbox-group {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0;
 }
 
 .checkbox-label {
@@ -142,7 +134,7 @@ input[type="email"]::placeholder {
   align-items: flex-start;
   gap: 0.75rem;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
 }
 
@@ -154,12 +146,13 @@ input[type="email"]::placeholder {
 
 .checkmark {
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 2px solid var(--border);
   border-radius: 4px;
   transition: all 0.2s;
   position: relative;
+  margin-top: 1px;
 }
 
 .checkbox-label input:checked + .checkmark {
@@ -170,17 +163,17 @@ input[type="email"]::placeholder {
 .checkbox-label input:checked + .checkmark::after {
   content: '';
   position: absolute;
-  left: 5px;
-  top: 1px;
-  width: 6px;
-  height: 10px;
+  left: 4px;
+  top: 0px;
+  width: 5px;
+  height: 9px;
   border: solid var(--bg);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
 .checkbox-label input:focus + .checkmark {
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .btn {
@@ -198,14 +191,15 @@ input[type="email"]::placeholder {
 }
 
 .btn-accent {
-  background: linear-gradient(135deg, var(--success) 0%, #238636 100%);
+  background: var(--accent);
   color: #fff;
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 .btn-accent:hover:not(:disabled) {
+  background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(63, 185, 80, 0.3);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
 }
 
 .btn-accent:disabled {
@@ -218,13 +212,11 @@ input[type="email"]::placeholder {
 
 .free-tier-info {
   text-align: center;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  margin-top: 1.25rem;
 }
 
 #free-usage {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
@@ -255,7 +247,7 @@ input[type="email"]::placeholder {
 }
 
 .error-box {
-  background: rgba(248, 81, 73, 0.1);
+  background: rgba(239, 68, 68, 0.1);
   border: 1px solid var(--error);
   border-radius: var(--radius-sm);
   padding: 1rem;
@@ -264,19 +256,22 @@ input[type="email"]::placeholder {
   font-size: 0.9rem;
 }
 
+.success-box {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid var(--success);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-top: 1.25rem;
+  color: var(--success);
+  font-size: 0.9rem;
+}
+
 footer {
   margin-top: 2rem;
+  text-align: center;
 }
 
-.features {
-  display: flex;
-  justify-content: center;
-  gap: 1.5rem;
-  list-style: none;
-  flex-wrap: wrap;
-}
-
-.features li {
+.trust-line {
   color: var(--text-muted);
   font-size: 0.85rem;
 }
@@ -304,7 +299,7 @@ footer {
 .result-page .note {
   font-size: 0.85rem;
   padding: 1rem;
-  background: rgba(88, 166, 255, 0.1);
+  background: rgba(99, 102, 241, 0.1);
   border-radius: var(--radius-sm);
   margin-bottom: 1.5rem;
 }
@@ -313,14 +308,35 @@ footer {
   margin-top: 0;
 }
 
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.auth-link {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.auth-link a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 480px) {
-  .card {
-    padding: 1.5rem;
+  h1 {
+    font-size: 1.65rem;
   }
   
-  .features {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
+  .card {
+    padding: 1.5rem;
   }
 }

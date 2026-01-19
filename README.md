@@ -1,10 +1,10 @@
-# Job Posting Alert
+# Competitor Tracker
 
-Get emailed when a job listing changes. First 2 URLs free, then $5.
+Get emailed when a competitor's webpage changes. Monitor pricing pages, feature lists, landing pages, or any public URL. First 2 URLs free, then $5.
 
 ## Features
 
-- **Monitors job postings** daily at 5am UTC via Vercel Cron
+- **Monitors any public webpage** daily at 5am UTC via Vercel Cron
 - **URL preview** using Playwright before confirming
 - **2 free monitors** per email, then $5 one-time payment
 - **Email alerts** when content changes (via Resend)
@@ -44,7 +44,7 @@ Get emailed when a job listing changes. First 2 URLs free, then $5.
 
 ## User Flow
 
-1. User enters job URL + email on landing page
+1. User enters page URL + email on landing page
 2. Clicks "Continue" → sees Playwright preview of the page
 3. If under 2 free monitors: clicks "Start Monitoring (Free)"
 4. If at limit: pays $5 via Stripe Checkout
@@ -64,7 +64,7 @@ npm install
 ### 2. Create Stripe Product & Price
 
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
-2. Create a new Product (e.g., "Job Posting Alert")
+2. Create a new Product (e.g., "Competitor Tracker")
 3. Add a one-time price of $5.00
 4. Copy the **Price ID** (starts with `price_`)
 
@@ -186,7 +186,7 @@ Stored in Vercel KV:
 ```json
 {
   "id": "uuid",
-  "url": "https://example.com/job",
+  "url": "https://competitor.com/pricing",
   "email": "user@example.com",
   "lastHash": "sha256-hash",
   "lastNotifiedAt": 1234567890,

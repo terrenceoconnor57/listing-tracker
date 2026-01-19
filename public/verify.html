@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Email | Competitor Tracker</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <main class="card result-page">
+      <div id="loading">
+        <div class="spinner"></div>
+        <p>Verifying your email...</p>
+      </div>
+
+      <div id="success" class="hidden">
+        <div class="result-icon">✓</div>
+        <h1>Email verified!</h1>
+        <p>Your account is now active. Redirecting to dashboard...</p>
+      </div>
+
+      <div id="error" class="hidden">
+        <div class="result-icon">✕</div>
+        <h1>Verification failed</h1>
+        <p id="error-message">Something went wrong.</p>
+        <a href="/signup.html" class="btn btn-primary">Try signing up again</a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const loadingEl = document.getElementById('loading');
+    const successEl = document.getElementById('success');
+    const errorEl = document.getElementById('error');
+    const errorMessage = document.getElementById('error-message');
+
+    async function verifyEmail() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const email = params.get('email');
+
+      if (!token || !email) {
+        showError('Invalid verification link.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Verification failed');
+        }
+
+        loadingEl.classList.add('hidden');
+        successEl.classList.remove('hidden');
+
+        // Redirect to dashboard after 2 seconds
+        setTimeout(() => {
+          window.location.href = '/dashboard.html';
+        }, 2000);
+
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function showError(message) {
+      loadingEl.classList.add('hidden');
+      errorEl.classList.remove('hidden');
+      errorMessage.textContent = message;
+    }
+
+    verifyEmail();
+  </script>
+</body>
+</html>

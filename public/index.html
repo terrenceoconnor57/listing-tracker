@@ -3,52 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Job Posting Alert | Get notified when it changes</title>
+  <title>Competitor Tracker | Monitor any webpage for changes</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .auth-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      gap: 1rem;
+      background: transparent;
+    }
+    .auth-bar a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .auth-bar a:hover {
+      color: var(--text);
+    }
+    .auth-bar .signup-link {
+      background: var(--accent);
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+    }
+    .auth-bar .signup-link:hover {
+      background: var(--accent-hover);
+      color: #fff;
+    }
+    .auth-bar.logged-in .auth-links {
+      display: none;
+    }
+    .auth-bar .user-links {
+      display: none;
+    }
+    .auth-bar.logged-in .user-links {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+  </style>
 </head>
 <body>
+  <nav class="auth-bar" id="auth-bar">
+    <div class="auth-links">
+      <a href="/login.html">Log in</a>
+      <a href="/signup.html" class="signup-link">Sign up</a>
+    </div>
+    <div class="user-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="#" id="logout-link">Log out</a>
+    </div>
+  </nav>
+
   <div class="container">
     <header>
-      <div class="logo">📡</div>
-      <h1>Job Posting Alert</h1>
-      <p class="tagline">Get emailed the moment a job listing changes</p>
+      <h1>Know when competitors change their website</h1>
+      <p class="tagline">Enter any URL. Get an email when it changes.</p>
     </header>
 
     <main class="card">
       <form id="monitor-form" autocomplete="off">
-        <div class="form-group">
-          <label for="url">Job Posting URL</label>
+        <div class="form-group url-group">
           <input 
             type="url" 
             id="url" 
             name="url" 
-            placeholder="https://company.com/careers/job-123"
+            placeholder="https://competitor.com/pricing"
             required
           >
           <span class="hint" id="url-hint"></span>
-        </div>
-
-        <div class="form-group">
-          <label for="email">Your Email</label>
-          <input 
-            type="email" 
-            id="email" 
-            name="email" 
-            placeholder="you@example.com"
-            required
-          >
-          <span class="hint" id="email-hint"></span>
-        </div>
-
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="confirm" name="confirm">
-            <span class="checkmark"></span>
-            <span>I confirm I own this email and want alerts</span>
-          </label>
         </div>
 
         <button type="submit" id="submit-btn" class="btn btn-accent" disabled>
@@ -71,11 +104,7 @@
     </main>
 
     <footer>
-      <ul class="features">
-        <li>✓ Daily checks</li>
-        <li>✓ Email alerts</li>
-        <li>✓ 2 free, then $5</li>
-      </ul>
+      <p class="trust-line">Checks daily · Email alerts · Free to start</p>
     </footer>
   </div>
 
