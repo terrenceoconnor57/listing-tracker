@@ -1,10 +1,8 @@
 import { kv } from './_lib/redis.js';
 import { sendEmail } from './_lib/email.js';
-import { getUserFromSession } from './_lib/auth.js';
 
 const FREE_LIMIT = 2;
 
-// Fetch page info and extract title/description
 async function fetchPageInfo(url) {
   try {
     const controller = new AbortController();
@@ -25,7 +23,6 @@ async function fetchPageInfo(url) {
 
     const html = await res.text();
     
-    // Decode HTML entities
     const decode = (str) => str
       .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)))
       .replace(/&#x([a-fA-F0-9]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
@@ -38,14 +35,12 @@ async function fetchPageInfo(url) {
       .replace(/&nbsp;/gi, ' ')
       .replace(/\\'/g, "'");
 
-    // Extract title
     let title = null;
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     if (titleMatch) {
       title = decode(titleMatch[1].trim()).substring(0, 150);
     }
 
-    // Extract meta description
     let description = null;
     const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
                       html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
@@ -60,98 +55,122 @@ async function fetchPageInfo(url) {
   }
 }
 
-export async function POST(request) {
-  try {
-    // Check authentication
-    const user = await getUserFromSession(request);
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+async function getUser(req) {
+  const cookies = req.cookies || {};
+  const sessionId = cookies.session;
+  
+  if (!sessionId) return null;
 
-    const { url } = await request.json();
-    const email = user.email; // Use authenticated user's email
+  const session = await kv.get(`session:${sessionId}`);
+  if (!session || session.expiresAt < Date.now()) return null;
 
-    // Validate URL
-    if (!url || typeof url !== 'string') {
-      return new Response(JSON.stringify({ error: 'URL is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+  const user = await kv.get(`user:${session.userId}`);
+  return user;
+}
 
+export default async function handler(req, res) {
+  if (req.method === 'GET') {
     try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new Error('Invalid protocol');
+      const user = await getUser(req);
+      if (!user) {
+        return res.status(200).json({ freeUsed: 0, freeLimit: FREE_LIMIT, canAddFree: true });
       }
-    } catch {
-      return new Response(JSON.stringify({ error: 'Invalid URL format' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
 
-    // Check how many free monitors this email has
-    const emailKey = `email:${email.toLowerCase()}`;
-    const existingMonitors = await kv.smembers(emailKey) || [];
-    
-    // Count only free (non-paid) monitors
-    let freeCount = 0;
-    for (const monitorId of existingMonitors) {
-      const monitorData = await kv.get(`monitor:${monitorId}`);
-      if (monitorData) {
-        const monitor = typeof monitorData === 'string' ? JSON.parse(monitorData) : monitorData;
-        if (!monitor.paid && monitor.active) {
-          freeCount++;
+      const emailKey = `email:${user.email.toLowerCase()}`;
+      const existingMonitors = await kv.smembers(emailKey) || [];
+      
+      let freeCount = 0;
+      for (const monitorId of existingMonitors) {
+        const monitorData = await kv.get(`monitor:${monitorId}`);
+        if (monitorData) {
+          const monitor = typeof monitorData === 'string' ? JSON.parse(monitorData) : monitorData;
+          if (!monitor.paid && monitor.active) {
+            freeCount++;
+          }
         }
       }
-    }
 
-    if (freeCount >= FREE_LIMIT) {
-      return new Response(JSON.stringify({ 
-        error: 'Free limit reached',
-        requiresPayment: true,
+      return res.status(200).json({ 
         freeUsed: freeCount,
-        freeLimit: FREE_LIMIT
-      }), {
-        status: 402, // Payment Required
-        headers: { 'Content-Type': 'application/json' }
+        freeLimit: FREE_LIMIT,
+        canAddFree: freeCount < FREE_LIMIT
       });
+
+    } catch (err) {
+      console.error('Check usage error:', err);
+      return res.status(500).json({ error: 'Failed to check usage' });
     }
+  }
 
-    // Create free monitor
-    const id = crypto.randomUUID();
-    const now = Date.now();
+  if (req.method === 'POST') {
+    try {
+      const user = await getUser(req);
+      if (!user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
-    const monitor = {
-      id,
-      url,
-      email: email.toLowerCase(),
-      lastHash: '',
-      lastNotifiedAt: 0,
-      createdAt: now,
-      active: true,
-      paid: false
-    };
+      const { url } = req.body;
+      const email = user.email;
 
-    // Store monitor
-    await kv.set(`monitor:${id}`, monitor);
-    
-    // Add to active set
-    await kv.sadd('monitors:active', id);
-    
-    // Track by email
-    await kv.sadd(emailKey, id);
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: 'URL is required' });
+      }
 
-    console.log(`Free monitor created: ${id} for ${url} (${email})`);
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          throw new Error('Invalid protocol');
+        }
+      } catch {
+        return res.status(400).json({ error: 'Invalid URL format' });
+      }
 
-    // Fetch page info and send welcome email
-    const pageInfo = await fetchPageInfo(url);
-    
-    const emailBody = `You're now monitoring this page!
+      const emailKey = `email:${email.toLowerCase()}`;
+      const existingMonitors = await kv.smembers(emailKey) || [];
+      
+      let freeCount = 0;
+      for (const monitorId of existingMonitors) {
+        const monitorData = await kv.get(`monitor:${monitorId}`);
+        if (monitorData) {
+          const monitor = typeof monitorData === 'string' ? JSON.parse(monitorData) : monitorData;
+          if (!monitor.paid && monitor.active) {
+            freeCount++;
+          }
+        }
+      }
+
+      if (freeCount >= FREE_LIMIT) {
+        return res.status(402).json({ 
+          error: 'Free limit reached',
+          requiresPayment: true,
+          freeUsed: freeCount,
+          freeLimit: FREE_LIMIT
+        });
+      }
+
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      const monitor = {
+        id,
+        url,
+        email: email.toLowerCase(),
+        lastHash: '',
+        lastNotifiedAt: 0,
+        createdAt: now,
+        active: true,
+        paid: false
+      };
+
+      await kv.set(`monitor:${id}`, monitor);
+      await kv.sadd('monitors:active', id);
+      await kv.sadd(emailKey, id);
+
+      console.log(`Free monitor created: ${id} for ${url} (${email})`);
+
+      const pageInfo = await fetchPageInfo(url);
+      
+      const emailBody = `You're now monitoring this page!
 
 ${pageInfo.title ? `📋 ${pageInfo.title}` : '📋 Page'}
 
@@ -162,82 +181,28 @@ ${pageInfo.description ? `${pageInfo.description}\n\n` : ''}We'll check this pag
 ---
 Competitor Tracker`;
 
-    try {
-      await sendEmail(
-        email.toLowerCase(),
-        pageInfo.title ? `Now monitoring: ${pageInfo.title.substring(0, 50)}` : 'Now monitoring your page',
-        emailBody
-      );
-      console.log(`Welcome email sent to ${email}`);
-    } catch (emailErr) {
-      console.error('Failed to send welcome email:', emailErr.message);
-      // Don't fail the request if email fails
-    }
-
-    return new Response(JSON.stringify({ 
-      success: true,
-      id,
-      freeUsed: freeCount + 1,
-      freeLimit: FREE_LIMIT
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-  } catch (err) {
-    console.error('Add monitor error:', err);
-    return new Response(JSON.stringify({ error: 'Failed to create monitor' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-}
-
-// Check free usage for an email (requires auth)
-export async function GET(request) {
-  try {
-    // Check authentication
-    const user = await getUserFromSession(request);
-    if (!user) {
-      return new Response(JSON.stringify({ 
-        freeUsed: 0,
-        freeLimit: FREE_LIMIT,
-        canAddFree: true
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const email = user.email;
-    const emailKey = `email:${email.toLowerCase()}`;
-    const existingMonitors = await kv.smembers(emailKey) || [];
-    
-    let freeCount = 0;
-    for (const monitorId of existingMonitors) {
-      const monitorData = await kv.get(`monitor:${monitorId}`);
-      if (monitorData) {
-        const monitor = typeof monitorData === 'string' ? JSON.parse(monitorData) : monitorData;
-        if (!monitor.paid && monitor.active) {
-          freeCount++;
-        }
+      try {
+        await sendEmail(
+          email.toLowerCase(),
+          pageInfo.title ? `Now monitoring: ${pageInfo.title.substring(0, 50)}` : 'Now monitoring your page',
+          emailBody
+        );
+      } catch (emailErr) {
+        console.error('Failed to send welcome email:', emailErr.message);
       }
+
+      return res.status(200).json({ 
+        success: true,
+        id,
+        freeUsed: freeCount + 1,
+        freeLimit: FREE_LIMIT
+      });
+
+    } catch (err) {
+      console.error('Add monitor error:', err);
+      return res.status(500).json({ error: 'Failed to create monitor' });
     }
-
-    return new Response(JSON.stringify({ 
-      freeUsed: freeCount,
-      freeLimit: FREE_LIMIT,
-      canAddFree: freeCount < FREE_LIMIT
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-  } catch (err) {
-    console.error('Check usage error:', err);
-    return new Response(JSON.stringify({ error: 'Failed to check usage' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
   }
+
+  return res.status(405).json({ error: 'Method not allowed' });
 }

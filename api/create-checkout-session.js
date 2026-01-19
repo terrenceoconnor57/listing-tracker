@@ -1,28 +1,37 @@
 import Stripe from 'stripe';
-import { getUserFromSession } from './_lib/auth.js';
+import { kv } from './_lib/redis.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-export async function POST(request) {
+async function getUser(req) {
+  const cookies = req.cookies || {};
+  const sessionId = cookies.session;
+  
+  if (!sessionId) return null;
+
+  const session = await kv.get(`session:${sessionId}`);
+  if (!session || session.expiresAt < Date.now()) return null;
+
+  const user = await kv.get(`user:${session.userId}`);
+  return user;
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    // Check authentication
-    const user = await getUserFromSession(request);
+    const user = await getUser(req);
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { url } = await request.json();
-    const email = user.email; // Use authenticated user's email
+    const { url } = req.body;
+    const email = user.email;
 
-    // Validate URL
     if (!url || typeof url !== 'string') {
-      return new Response(JSON.stringify({ error: 'URL is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'URL is required' });
     }
 
     try {
@@ -31,16 +40,11 @@ export async function POST(request) {
         throw new Error('Invalid protocol');
       }
     } catch {
-      return new Response(JSON.stringify({ error: 'Invalid URL format' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    // Get origin for redirect URLs
-    const origin = request.headers.get('origin') || 'https://listing-tracker.vercel.app';
+    const origin = req.headers.origin || `https://${req.headers.host}` || 'https://listing-tracker.vercel.app';
 
-    // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -59,16 +63,10 @@ export async function POST(request) {
       cancel_url: `${origin}/cancel.html`
     });
 
-    return new Response(JSON.stringify({ checkoutUrl: session.url }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(200).json({ checkoutUrl: session.url });
 
   } catch (err) {
     console.error('Checkout session error:', err);
-    return new Response(JSON.stringify({ error: 'Failed to create checkout session' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Failed to create checkout session' });
   }
 }

@@ -1,29 +1,32 @@
-import { getUserFromSession } from './_lib/auth.js';
+import { kv } from './_lib/redis.js';
 
-export async function GET(request) {
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    const user = await getUserFromSession(request);
+    const cookies = req.cookies || {};
+    const sessionId = cookies.session;
     
-    if (!user) {
-      return new Response(JSON.stringify({ authenticated: false }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    if (!sessionId) {
+      return res.status(200).json({ authenticated: false });
     }
 
-    return new Response(JSON.stringify({ 
-      authenticated: true,
-      email: user.email
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const session = await kv.get(`session:${sessionId}`);
+    if (!session || session.expiresAt < Date.now()) {
+      return res.status(200).json({ authenticated: false });
+    }
+
+    const user = await kv.get(`user:${session.userId}`);
+    if (!user) {
+      return res.status(200).json({ authenticated: false });
+    }
+
+    return res.status(200).json({ authenticated: true, email: user.email });
 
   } catch (err) {
     console.error('Me error:', err);
-    return new Response(JSON.stringify({ authenticated: false }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(200).json({ authenticated: false });
   }
 }

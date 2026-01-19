@@ -25,7 +25,6 @@ async function fetchPageInfo(url) {
 
     const html = await res.text();
     
-    // Decode HTML entities
     const decode = (str) => str
       .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)))
       .replace(/&#x([a-fA-F0-9]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
@@ -38,14 +37,12 @@ async function fetchPageInfo(url) {
       .replace(/&nbsp;/gi, ' ')
       .replace(/\\'/g, "'");
 
-    // Extract title
     let title = null;
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     if (titleMatch) {
       title = decode(titleMatch[1].trim()).substring(0, 150);
     }
 
-    // Extract meta description
     let description = null;
     const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
                       html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
@@ -60,14 +57,31 @@ async function fetchPageInfo(url) {
   }
 }
 
-export async function POST(request) {
-  console.log('Stripe webhook received');
-  
-  try {
-    const rawBody = await request.text();
-    const sig = request.headers.get('stripe-signature');
+// Disable body parsing for Stripe signature verification
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
-    console.log('Signature present:', !!sig);
+// Helper to read raw body
+async function buffer(readable) {
+  const chunks = [];
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(200).send('Stripe webhook endpoint');
+  }
+
+  try {
+    const buf = await buffer(req);
+    const rawBody = buf.toString('utf8');
+    const sig = req.headers['stripe-signature'];
 
     let event;
 
@@ -79,58 +93,43 @@ export async function POST(request) {
       );
     } catch (err) {
       console.error('Webhook signature verification failed:', err.message);
-      return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+      return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    console.log('Event type:', event.type);
-
-    // Handle the event
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       
       const url = session.metadata?.url;
       const email = session.metadata?.email;
 
-      console.log('Checkout completed - URL:', url, 'Email:', email);
-
       if (!url || !email) {
         console.error('Missing metadata in session:', session.id);
-        return new Response('Missing metadata', { status: 400 });
+        return res.status(400).send('Missing metadata');
       }
 
-      try {
-        // Generate unique ID
-        const id = crypto.randomUUID();
-        const now = Date.now();
+      const id = crypto.randomUUID();
+      const now = Date.now();
 
-        // Create paid monitor object
-        const monitor = {
-          id,
-          url,
-          email: email.toLowerCase(),
-          lastHash: '',
-          lastNotifiedAt: 0,
-          createdAt: now,
-          active: true,
-          paid: true
-        };
+      const monitor = {
+        id,
+        url,
+        email: email.toLowerCase(),
+        lastHash: '',
+        lastNotifiedAt: 0,
+        createdAt: now,
+        active: true,
+        paid: true
+      };
 
-        // Store monitor data
-        await kv.set(`monitor:${id}`, monitor);
+      await kv.set(`monitor:${id}`, monitor);
+      await kv.sadd('monitors:active', id);
+      await kv.sadd(`email:${email.toLowerCase()}`, id);
 
-        // Add to active monitors set
-        await kv.sadd('monitors:active', id);
+      console.log(`Paid monitor created: ${id} for ${url}`);
 
-        // Track by email
-        const emailKey = `email:${email.toLowerCase()}`;
-        await kv.sadd(emailKey, id);
-
-        console.log(`Paid monitor created: ${id} for ${url}`);
-
-        // Fetch page info and send welcome email
-        const pageInfo = await fetchPageInfo(url);
-        
-        const emailBody = `Thanks for your purchase! You're now monitoring this page.
+      const pageInfo = await fetchPageInfo(url);
+      
+      const emailBody = `Thanks for your purchase! You're now monitoring this page.
 
 ${pageInfo.title ? `📋 ${pageInfo.title}` : '📋 Page'}
 
@@ -141,32 +140,21 @@ ${pageInfo.description ? `${pageInfo.description}\n\n` : ''}We'll check this pag
 ---
 Competitor Tracker`;
 
-        try {
-          await sendEmail(
-            email.toLowerCase(),
-            pageInfo.title ? `Now monitoring: ${pageInfo.title.substring(0, 50)}` : 'Now monitoring your page',
-            emailBody
-          );
-          console.log(`Welcome email sent to ${email}`);
-        } catch (emailErr) {
-          console.error('Failed to send welcome email:', emailErr.message);
-        }
-
-      } catch (err) {
-        console.error('Failed to create monitor:', err);
-        return new Response('Failed to create monitor', { status: 500 });
+      try {
+        await sendEmail(
+          email.toLowerCase(),
+          pageInfo.title ? `Now monitoring: ${pageInfo.title.substring(0, 50)}` : 'Now monitoring your page',
+          emailBody
+        );
+      } catch (emailErr) {
+        console.error('Failed to send welcome email:', emailErr.message);
       }
     }
 
-    return new Response('OK', { status: 200 });
+    return res.status(200).send('OK');
     
   } catch (err) {
-    console.error('Webhook handler error:', err);
-    return new Response('Internal error', { status: 500 });
+    console.error('Webhook error:', err);
+    return res.status(500).send('Internal error');
   }
-}
-
-// Handle other methods
-export async function GET() {
-  return new Response('Webhook endpoint - POST only', { status: 200 });
 }

@@ -1,26 +1,23 @@
 import { getSession, deleteSession, clearSessionCookie } from './_lib/auth.js';
 
-export async function POST(request) {
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    const session = await getSession(request);
+    const cookies = req.cookies || {};
+    const sessionId = cookies.session;
     
-    if (session) {
-      await deleteSession(session.sessionId);
+    if (sessionId) {
+      await deleteSession(sessionId);
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Set-Cookie': clearSessionCookie()
-      }
-    });
+    res.setHeader('Set-Cookie', clearSessionCookie());
+    return res.status(200).json({ success: true });
 
   } catch (err) {
     console.error('Logout error:', err);
-    return new Response(JSON.stringify({ error: 'Logout failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Logout failed' });
   }
 }

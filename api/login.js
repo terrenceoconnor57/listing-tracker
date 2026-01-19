@@ -1,73 +1,46 @@
 import { kv } from './_lib/redis.js';
 import { verifyPassword, createSession, sessionCookie } from './_lib/auth.js';
 
-export async function POST(request) {
-  try {
-    const { email, password } = await request.json();
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-    // Validate inputs
+  try {
+    const { email, password } = req.body;
+
     if (!email || typeof email !== 'string') {
-      return new Response(JSON.stringify({ error: 'Email is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Email is required' });
     }
 
     if (!password || typeof password !== 'string') {
-      return new Response(JSON.stringify({ error: 'Password is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Password is required' });
     }
 
     const normalizedEmail = email.toLowerCase();
     const userKey = `user:${normalizedEmail}`;
 
-    // Get user
     const user = await kv.get(userKey);
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Invalid email or password' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Check if verified
     if (!user.verified) {
-      return new Response(JSON.stringify({ error: 'Please verify your email first' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(401).json({ error: 'Please verify your email first' });
     }
 
-    // Verify password
     const valid = verifyPassword(password, user.passwordHash, user.passwordSalt);
     if (!valid) {
-      return new Response(JSON.stringify({ error: 'Invalid email or password' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Create session
     const sessionId = await createSession(normalizedEmail);
 
-    return new Response(JSON.stringify({ 
-      success: true,
-      email: normalizedEmail
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Set-Cookie': sessionCookie(sessionId)
-      }
-    });
+    res.setHeader('Set-Cookie', sessionCookie(sessionId));
+    return res.status(200).json({ success: true, email: normalizedEmail });
 
   } catch (err) {
     console.error('Login error:', err);
-    return new Response(JSON.stringify({ error: 'Login failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Login failed' });
   }
 }

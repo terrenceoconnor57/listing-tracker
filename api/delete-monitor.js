@@ -1,67 +1,55 @@
 import { kv } from './_lib/redis.js';
-import { getUserFromSession } from './_lib/auth.js';
 
-export async function POST(request) {
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
-    // Check authentication
-    const user = await getUserFromSession(request);
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    const cookies = req.cookies || {};
+    const sessionId = cookies.session;
+    
+    if (!sessionId) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { monitorId } = await request.json();
+    const session = await kv.get(`session:${sessionId}`);
+    if (!session || session.expiresAt < Date.now()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const user = await kv.get(`user:${session.userId}`);
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { monitorId } = req.body;
 
     if (!monitorId || typeof monitorId !== 'string') {
-      return new Response(JSON.stringify({ error: 'Monitor ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Monitor ID is required' });
     }
 
-    // Get the monitor
     const monitorData = await kv.get(`monitor:${monitorId}`);
     if (!monitorData) {
-      return new Response(JSON.stringify({ error: 'Monitor not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(404).json({ error: 'Monitor not found' });
     }
 
     const monitor = typeof monitorData === 'string' ? JSON.parse(monitorData) : monitorData;
 
-    // Verify ownership
     if (monitor.email.toLowerCase() !== user.email.toLowerCase()) {
-      return new Response(JSON.stringify({ error: 'Not authorized to delete this monitor' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(403).json({ error: 'Not authorized to delete this monitor' });
     }
 
-    // Remove from active monitors set
     await kv.srem('monitors:active', monitorId);
-
-    // Remove from user's email set
-    const emailKey = `email:${user.email.toLowerCase()}`;
-    await kv.srem(emailKey, monitorId);
-
-    // Delete the monitor data
+    await kv.srem(`email:${user.email.toLowerCase()}`, monitorId);
     await kv.del(`monitor:${monitorId}`);
 
     console.log(`Monitor deleted: ${monitorId} by ${user.email}`);
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(200).json({ success: true });
 
   } catch (err) {
     console.error('Delete monitor error:', err);
-    return new Response(JSON.stringify({ error: 'Failed to delete monitor' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Failed to delete monitor' });
   }
 }
