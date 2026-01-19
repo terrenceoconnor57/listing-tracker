@@ -80,31 +80,6 @@ h1 {
   padding: 2rem;
 }
 
-.step-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.step-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--accent);
-  color: var(--bg);
-  font-weight: 700;
-  font-size: 0.85rem;
-  border-radius: 50%;
-}
-
-.step-header h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
 .form-group {
   margin-bottom: 1.25rem;
 }
@@ -141,13 +116,6 @@ input[type="url"]::placeholder,
 input[type="email"]::placeholder {
   color: var(--text-muted);
   opacity: 0.6;
-}
-
-input[type="url"]:read-only,
-input[type="email"]:read-only {
-  background: rgba(88, 166, 255, 0.05);
-  border-color: rgba(88, 166, 255, 0.2);
-  cursor: not-allowed;
 }
 
 .hint {
@@ -226,21 +194,7 @@ input[type="email"]:read-only {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.btn-primary:disabled {
-  background: var(--border);
-  color: var(--text-muted);
-  cursor: not-allowed;
+  margin-top: 1.5rem;
 }
 
 .btn-accent {
@@ -249,73 +203,29 @@ input[type="email"]:read-only {
   font-size: 1.05rem;
 }
 
-.btn-accent:hover {
+.btn-accent:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(63, 185, 80, 0.3);
 }
 
-.btn-link {
-  display: block;
-  width: 100%;
-  background: none;
-  border: none;
+.btn-accent:disabled {
+  background: var(--border);
   color: var(--text-muted);
-  font-family: inherit;
-  font-size: 0.9rem;
-  padding: 0.75rem;
-  margin-top: 0.75rem;
-  cursor: pointer;
-  transition: color 0.2s;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-.btn-link:hover {
-  color: var(--accent);
+.free-tier-info {
+  text-align: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
-.summary-card {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.625rem 0;
-  gap: 1rem;
-}
-
-.summary-row:not(:last-child) {
-  border-bottom: 1px solid var(--border);
-}
-
-.summary-label {
-  color: var(--text-muted);
+#free-usage {
   font-size: 0.85rem;
-  flex-shrink: 0;
-}
-
-.summary-value {
-  font-size: 0.9rem;
-  text-align: right;
-  word-break: break-all;
-  max-width: 70%;
-}
-
-.price-row .price {
-  color: var(--price);
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.one-time {
-  font-size: 0.75rem;
-  font-weight: 400;
   color: var(--text-muted);
-  margin-left: 0.25rem;
 }
 
 .hidden {
@@ -397,6 +307,10 @@ footer {
   background: rgba(88, 166, 255, 0.1);
   border-radius: var(--radius-sm);
   margin-bottom: 1.5rem;
+}
+
+.result-page .btn {
+  margin-top: 0;
 }
 
 @media (max-width: 480px) {

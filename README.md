@@ -1,12 +1,13 @@
 # Job Posting Alert
 
-Get emailed the moment a job listing changes. Simple, one-time $5 payment.
+Get emailed when a job listing changes. First 2 URLs free, then $5.
 
 ## Features
 
-- **Monitors job postings** every 5 minutes via Vercel Cron
-- **Instant email alerts** when content changes (via Resend)
-- **One-time $5 payment** via Stripe Checkout
+- **Monitors job postings** daily at 5am UTC via Vercel Cron
+- **URL preview** using Playwright before confirming
+- **2 free monitors** per email, then $5 one-time payment
+- **Email alerts** when content changes (via Resend)
 - **No frameworks** — just static HTML/CSS/JS + Vercel Functions
 
 ## Tech Stack
@@ -16,27 +17,39 @@ Get emailed the moment a job listing changes. Simple, one-time $5 payment.
 - **Storage**: Vercel KV
 - **Payments**: Stripe Checkout
 - **Email**: Resend
+- **Preview**: Playwright (headless Chrome)
 - **Scheduler**: Vercel Cron
 
 ## Project Structure
 
 ```
 /public
-  index.html      # Landing page with two-step form
+  index.html      # Landing page with two-step form + preview
   styles.css      # Styling
   app.js          # Frontend logic
-  success.html    # Post-payment success page
+  success.html    # Success page
   cancel.html     # Payment canceled page
 
 /api
   create-checkout-session.js   # Creates Stripe session
   stripe-webhook.js            # Handles Stripe webhooks
+  add-monitor.js               # Adds free monitors
+  preview.js                   # Playwright screenshot
   /cron
-    check.js                   # Cron job to check URLs
+    check.js                   # Daily cron job to check URLs
   /_lib
     hash.js                    # HTML cleaning + hashing
     email.js                   # Resend email helper
 ```
+
+## User Flow
+
+1. User enters job URL + email on landing page
+2. Clicks "Continue" → sees Playwright preview of the page
+3. If under 2 free monitors: clicks "Start Monitoring (Free)"
+4. If at limit: pays $5 via Stripe Checkout
+5. Monitor is created in Vercel KV
+6. Daily cron checks for changes and emails user
 
 ## Setup
 
@@ -153,7 +166,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 1. Open `http://localhost:3000`
 2. Enter a URL and email
-3. Click Continue, then Pay
+3. Use a URL 3 times to trigger payment
 4. Use test card: `4242 4242 4242 4242` (any future date, any CVC)
 
 ### 7. Test Cron Manually
@@ -167,6 +180,7 @@ curl -H "x-cron-secret: YOUR_CRON_SECRET" http://localhost:3000/api/cron/check
 Stored in Vercel KV:
 
 - **Set**: `monitors:active` — Set of active monitor IDs
+- **Set**: `email:<email>` — Set of monitor IDs for an email
 - **Key**: `monitor:<id>` — JSON object:
 
 ```json
@@ -177,18 +191,14 @@ Stored in Vercel KV:
   "lastHash": "sha256-hash",
   "lastNotifiedAt": 1234567890,
   "createdAt": 1234567890,
-  "active": true
+  "active": true,
+  "paid": false
 }
 ```
 
-## How It Works
+## Cron Schedule
 
-1. User enters job URL + email on landing page
-2. User pays $5 via Stripe Checkout
-3. Stripe webhook creates a monitor in Vercel KV
-4. Cron job runs every 5 minutes
-5. For each monitor, fetches the URL and hashes cleaned content
-6. If hash differs from last check, sends email via Resend
+The cron runs daily at 5am UTC (`0 5 * * *`). You can adjust this in `vercel.json`.
 
 ## License
 

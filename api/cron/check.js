@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { kv } from '../_lib/redis.js';
 import { cleanHtmlToText, sha256 } from '../_lib/hash.js';
 import { sendEmail } from '../_lib/email.js';
 
@@ -93,7 +93,7 @@ export async function GET(request) {
         // First check - just set hash, don't notify
         if (!monitor.lastHash) {
           monitor.lastHash = newHash;
-          await kv.set(`monitor:${id}`, JSON.stringify(monitor));
+          await kv.set(`monitor:${id}`, monitor);
           console.log(`Initial hash set for ${id}`);
           continue;
         }
@@ -107,7 +107,7 @@ export async function GET(request) {
           monitor.lastNotifiedAt = now;
 
           // Update in KV
-          await kv.set(`monitor:${id}`, JSON.stringify(monitor));
+          await kv.set(`monitor:${id}`, monitor);
 
           // Send email notification
           const snippet = cleanedText.substring(0, 600);
