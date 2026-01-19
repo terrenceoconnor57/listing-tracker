@@ -1,10 +1,10 @@
 import Stripe from 'stripe';
+import { buffer } from 'micro';
 import { kv } from './_lib/redis.js';
 import { sendEmail } from './_lib/email.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Fetch page info and extract title/description
 async function fetchPageInfo(url) {
   try {
     const controller = new AbortController();
@@ -57,21 +57,11 @@ async function fetchPageInfo(url) {
   }
 }
 
-// Disable body parsing for Stripe signature verification
 export const config = {
   api: {
     bodyParser: false,
   },
 };
-
-// Helper to read raw body
-async function buffer(readable) {
-  const chunks = [];
-  for await (const chunk of readable) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks);
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -79,9 +69,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const buf = await buffer(req);
-    const rawBody = buf.toString('utf8');
+    const rawBody = await buffer(req);
     const sig = req.headers['stripe-signature'];
+
+    console.log('Webhook received, sig present:', !!sig);
+    console.log('Raw body length:', rawBody.length);
+    console.log('Webhook secret present:', !!process.env.STRIPE_WEBHOOK_SECRET);
 
     let event;
 
@@ -96,11 +89,15 @@ export default async function handler(req, res) {
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    console.log('Event type:', event.type);
+
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       
       const url = session.metadata?.url;
       const email = session.metadata?.email;
+
+      console.log('Session metadata - url:', url, 'email:', email);
 
       if (!url || !email) {
         console.error('Missing metadata in session:', session.id);
@@ -146,6 +143,7 @@ Competitor Tracker`;
           pageInfo.title ? `Now monitoring: ${pageInfo.title.substring(0, 50)}` : 'Now monitoring your page',
           emailBody
         );
+        console.log('Welcome email sent');
       } catch (emailErr) {
         console.error('Failed to send welcome email:', emailErr.message);
       }

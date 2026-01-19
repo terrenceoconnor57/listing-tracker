@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "ioredis": "^5.3.2",
+    "micro": "^10.0.1",
     "stripe": "^14.0.0"
   },
   "devDependencies": {
